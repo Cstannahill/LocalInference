@@ -1,0 +1,114 @@
+# Secrets and local configuration
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+*.env
+.env
+.env.local
+.env.*.local
+
+# IDE and Editor files
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.user
+*.userprefs
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Build outputs
+bin/
+obj/
+out/
+dist/
+build/
+.nuget/
+*.nupkg
+*.snupkg
+
+# NuGet
+packages/
+.nuget/packages/
+.nuget/NuGet.Config
+.nuget/NuGet.exe
+
+# Entity Framework Core
+*.db
+*.db-shm
+*.db-wal
+Migrations/*.Designer.cs~
+
+# Logs
+logs/
+*.log
+*.logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.dylib
+*.so
+*.class
+
+# Optional npm/yarn
+node_modules/
+yarn.lock
+package-lock.json
+
+# Test results
+TestResults/
+coverage/
+*.trx
+
+# Local history
+.history/
+.DS_Store
+
+# ReSharper
+.resharper
+.resharper.user
+*.sln.iml
+_ReSharper.*/
+*.sln.DotSettings.user
+
+# Visual Studio Code
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/tasks.json
+
+# Local development
+*.sqlite
+*.sqlite3
+appsettings.local.json
+
+# Mac OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~.nib
+
+# Docker
+.dockerignore
+docker-compose.local.yml
+
+# Generated files
+coverage.xml
+.editorconfig.user
