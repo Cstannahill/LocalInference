@@ -16,6 +16,9 @@ public sealed class ApplicationDbContext : DbContext
     public DbSet<ContextCheckpoint> ContextCheckpoints => Set<ContextCheckpoint>();
     public DbSet<TechnicalDocument> TechnicalDocuments => Set<TechnicalDocument>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<SystemProfile> SystemProfiles => Set<SystemProfile>();
+    public DbSet<ReferenceData> ReferenceData => Set<ReferenceData>();
+    public DbSet<ReferenceDataItem> ReferenceDataItems => Set<ReferenceDataItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
