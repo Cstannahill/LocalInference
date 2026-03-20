@@ -1,7 +1,9 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using LocalInference.Application.Abstractions.Inference;
-using LocalInference.Application.Services;
+using LocalInference.Application.Abstractions.Persistence;
+using LocalInference.Application.Prompting;
+using LocalInference.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LocalInference.Api.Endpoints;
@@ -16,6 +18,8 @@ public static class ChatCompletionsEndpoints
             [FromBody] ChatCompletionRequest request,
             IInferenceService inferenceService,
             ISessionManagementService sessionService,
+            IContextComposer contextComposer,
+            IRepository<SystemProfile> systemProfileRepository,
             CancellationToken cancellationToken) =>
         {
             Guid sessionId;
@@ -25,15 +29,25 @@ public static class ChatCompletionsEndpoints
             }
             else
             {
+                // Determine which system profile to use (default to first available or a default one)
+                var defaultProfile = await systemProfileRepository.GetAllAsync(cancellationToken);
+                Guid? profileId = defaultProfile.FirstOrDefault()?.Id;
+
                 var session = await sessionService.CreateSessionAsync(new CreateSessionRequest
                 {
                     Name = $"Chat {DateTime.UtcNow:yyyy-MM-dd HH:mm}",
-                    InferenceConfigId = request.ConfigId
+                    InferenceConfigId = request.ConfigId,
+                    SystemProfileId = profileId // Link to system profile if available
                 }, cancellationToken);
                 sessionId = session.Id;
             }
 
             var userMessage = request.Messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
+
+            // Get the system profile for context composition
+            var systemProfile = await systemProfileRepository.GetByIdAsync(
+                sessionId.HasValue ? sessionId.Value : Guid.Empty,
+                cancellationToken);
 
             if (request.Stream)
             {
@@ -49,6 +63,20 @@ public static class ChatCompletionsEndpoints
                         Created = created,
                         Model = request.Model ?? "default",
                         Choices = new[] { new ChatCompletionStreamChoice { Delta = new DeltaMessage { Role = "assistant" } } }
+                    })}\n\n"));
+
+                    // For streaming, we still need to compose the context but send it in chunks
+                    var context = await contextComposer.ComposePromptAsync(sessionId, userMessage, cancellationToken);
+
+                    // In a real implementation, we would stream the LLM response with the pre-composed context
+                    // For now, we'll simulate by sending the context as the first chunk
+                    await stream.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"data: {System.Text.Json.JsonSerializer.Serialize(new ChatCompletionStreamResponse
+                    {
+                        Id = id,
+                        Object = "chat.completion.chunk",
+                        Created = created,
+                        Model = request.Model ?? "default",
+                        Choices = new[] { new ChatCompletionStreamChoice { Delta = new DeltaMessage { Content = context } } }
                     })}\n\n"));
 
                     await foreach (var chunk in inferenceService.StreamGenerateAsync(sessionId, userMessage, new InferenceOptions
@@ -108,7 +136,10 @@ public static class ChatCompletionsEndpoints
                 return Results.Stream(StreamResponse, "text/event-stream");
             }
 
-            var result = await inferenceService.GenerateAsync(sessionId, userMessage, new InferenceOptions
+            // Non-streaming path - compose the full context and send to inference
+            var context = await contextComposer.ComposePromptAsync(sessionId, userMessage, cancellationToken);
+
+            var result = await inferenceService.GenerateAsync(sessionId, context, new InferenceOptions
             {
                 Temperature = (double?)request.Temperature,
                 TopP = (double?)request.TopP,
