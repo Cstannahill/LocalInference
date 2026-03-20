@@ -24,7 +24,7 @@ We will implement a relational database schema (EF Core) that supports both meta
 ### Core Tables:
 - **SystemProfiles:** Stores agent identity and default settings.
 - **ReferenceData:** Container for vectorized knowledge sets.
-- **ReferenceDataItems:** Chunks of data with associated embedding vectors.
+- **ReferenceDataItems:** Chunks of data with associated embedding vectors (Stored in **Npgsql/pgvector** for production or **SQLite** for local development).
 - **ExtractedKnowledge:** Long-term memory facts extracted via background tasks.
 - **Sessions & Messages:** Extended to support `SystemProfile` links and `PromptSnapshot` logging.
 
@@ -49,6 +49,7 @@ Summarization is handled by the **Background Worker** to ensure non-blocking inf
 - **Checkpoint-Based:** Every 10 messages, a "Mini-Summary" is generated.
 - **Threshold-Based (Requirement):** When the active context exceeds **85%** of the model's limit:
     - The worker condenses the oldest 50% of messages into a "Historical Context Block".
+    - This block replaces the messages in the **Summary Slice**, ensuring they are still present for context without bloating the window.
     - Raw messages are offloaded from the active memory but remain searchable via RAG.
 
 ## 6. Provider Abstraction Layer
