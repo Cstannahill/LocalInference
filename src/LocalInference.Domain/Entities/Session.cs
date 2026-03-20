@@ -8,7 +8,9 @@ public sealed class Session : AuditableEntity
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public Guid InferenceConfigId { get; private set; }
+    public Guid? SystemProfileId { get; private set; }
     public InferenceConfig InferenceConfig { get; private set; } = null!;
+    public SystemProfile? SystemProfile { get; private set; }
     public int ContextWindowTokens { get; private set; }
     public int MaxOutputTokens { get; private set; }
     public bool IsActive { get; private set; }
@@ -22,12 +24,13 @@ public sealed class Session : AuditableEntity
 
     private Session() { }
 
-    public static Session Create(string name, InferenceConfig config, int contextWindowTokens = 8192, int maxOutputTokens = 2048)
+    public static Session Create(string name, InferenceConfig config, Guid? systemProfileId = null, int contextWindowTokens = 8192, int maxOutputTokens = 2048)
     {
         return new Session
         {
             Name = name,
             InferenceConfigId = config.Id,
+            SystemProfileId = systemProfileId,
             ContextWindowTokens = contextWindowTokens,
             MaxOutputTokens = maxOutputTokens,
             IsActive = true
@@ -65,6 +68,13 @@ public sealed class Session : AuditableEntity
     {
         InferenceConfigId = inferenceConfigId;
         InferenceConfig = inferenceConfig;
+        MarkUpdated();
+    }
+
+    public void UpdateSystemProfile(Guid? systemProfileId, SystemProfile systemProfile)
+    {
+        SystemProfileId = systemProfileId;
+        SystemProfile = systemProfile;
         MarkUpdated();
     }
 
