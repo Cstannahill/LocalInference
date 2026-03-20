@@ -2,7 +2,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using LocalInference.Application.Abstractions.Inference;
 using LocalInference.Application.Abstractions.Persistence;
-using LocalInference.Application.Prompting;
+using LocalInference.Application.Abstractions.Prompting;
+using LocalInference.Application.Abstractions.SessionManagement;
 using LocalInference.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,7 +20,7 @@ public static class ChatCompletionsEndpoints
             IInferenceService inferenceService,
             ISessionManagementService sessionService,
             IContextComposer contextComposer,
-            IRepository<SystemProfile> systemProfileRepository,
+            ISystemProfileRepository systemProfileRepository,
             CancellationToken cancellationToken) =>
         {
             Guid sessionId;
@@ -29,15 +30,10 @@ public static class ChatCompletionsEndpoints
             }
             else
             {
-                // Determine which system profile to use (default to first available or a default one)
-                var defaultProfile = await systemProfileRepository.GetAllAsync(cancellationToken);
-                Guid? profileId = defaultProfile.FirstOrDefault()?.Id;
-
                 var session = await sessionService.CreateSessionAsync(new CreateSessionRequest
                 {
                     Name = $"Chat {DateTime.UtcNow:yyyy-MM-dd HH:mm}",
-                    InferenceConfigId = request.ConfigId,
-                    SystemProfileId = profileId // Link to system profile if available
+                    InferenceConfigId = request.ConfigId
                 }, cancellationToken);
                 sessionId = session.Id;
             }
@@ -45,9 +41,7 @@ public static class ChatCompletionsEndpoints
             var userMessage = request.Messages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
 
             // Get the system profile for context composition
-            var systemProfile = await systemProfileRepository.GetByIdAsync(
-                sessionId.HasValue ? sessionId.Value : Guid.Empty,
-                cancellationToken);
+            var systemProfile = await systemProfileRepository.GetByIdAsync(sessionId, cancellationToken);
 
             if (request.Stream)
             {

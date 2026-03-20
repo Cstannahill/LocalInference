@@ -2,6 +2,7 @@ using LocalInference.Application.Abstractions.Inference;
 using LocalInference.Application.Abstractions.Persistence;
 using LocalInference.Application.Abstractions.Summarization;
 using LocalInference.Domain.Entities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -43,7 +44,7 @@ public class SummarizationJob : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var sessionRepository = scope.ServiceProvider.GetRequiredService<ISessionRepository>();
-        var summarizationService = scope.ServiceProvider.GetRequiredService<IContextSummarizationService>();
+        var summarizationService = scope.ServiceProvider.GetRequiredService<ITechnicalSummarizationService>();
         var inferenceService = scope.ServiceProvider.GetRequiredService<IInferenceService>();
 
         // Get sessions that need summarization (in a real app, this would come from a queue)
@@ -60,7 +61,7 @@ public class SummarizationJob : BackgroundService
     private async Task ProcessSessionSummarizationAsync(
         Guid sessionId,
         ISessionRepository sessionRepository,
-        IContextSummarizationService summarizationService,
+        ITechnicalSummarizationService summarizationService,
         IInferenceService inferenceService,
         CancellationToken cancellationToken)
     {
@@ -70,7 +71,14 @@ public class SummarizationJob : BackgroundService
             if (session == null) return;
 
             // Perform the summarization
-            await summarizationService.SummarizeConversationAsync(sessionId, cancellationToken);
+            var messageSummaries = session.Messages.Select(m => new MessageSummary
+            {
+                Role = m.Role.ToString(),
+                Content = m.Content,
+                Timestamp = m.CreatedAt
+            }).ToList();
+
+            await summarizationService.SummarizeConversationAsync(messageSummaries, new SummarizationOptions(), cancellationToken);
         }
         catch (Exception ex)
         {

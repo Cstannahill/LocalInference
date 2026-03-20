@@ -7,64 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace LocalInference.Application.Services;
 
-public interface IInferenceService
-{
-    Task<InferenceResult> GenerateAsync(
-        Guid sessionId,
-        string userMessage,
-        InferenceOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    IAsyncEnumerable<InferenceStreamResult> StreamGenerateAsync(
-        Guid sessionId,
-        string userMessage,
-        InferenceOptions? options = null,
-        CancellationToken cancellationToken = default);
-
-    Task<InferenceResult> GenerateWithConfigAsync(
-        Guid configId,
-        IReadOnlyList<ChatMessage> messages,
-        InferenceOptions? options = null,
-        CancellationToken cancellationToken = default);
-}
-
-public sealed record InferenceOptions
-{
-    public double? Temperature { get; init; }
-    public double? TopP { get; init; }
-    public int? MaxTokens { get; init; }
-    public bool Stream { get; init; } = false;
-    public IReadOnlyList<RetrievalContext>? RetrievalContext { get; init; }
-}
-
-public sealed record RetrievalContext
-{
-    public required string Content { get; init; }
-    public required string Source { get; init; }
-    public double RelevanceScore { get; init; }
-}
-
-public sealed record InferenceResult
-{
-    public required string Content { get; init; }
-    public required int PromptTokens { get; init; }
-    public required int CompletionTokens { get; init; }
-    public required int TotalTokens { get; init; }
-    public required string Model { get; init; }
-    public required string FinishReason { get; init; }
-    public DateTime GeneratedAt { get; init; } = DateTime.UtcNow;
-}
-
-public sealed record InferenceStreamResult
-{
-    public string? DeltaContent { get; init; }
-    public string? FinishReason { get; init; }
-    public int? PromptTokens { get; init; }
-    public int? CompletionTokens { get; init; }
-    public int? TotalTokens { get; init; }
-    public bool IsComplete { get; init; }
-}
-
 public class InferenceService : IInferenceService
 {
     private readonly ISessionRepository _sessionRepository;

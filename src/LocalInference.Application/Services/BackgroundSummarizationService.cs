@@ -2,6 +2,7 @@ using LocalInference.Application.Abstractions.Inference;
 using LocalInference.Application.Abstractions.Persistence;
 using LocalInference.Application.Abstractions.Summarization;
 using LocalInference.Domain.Entities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +45,7 @@ public class BackgroundSummarizationService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var sessionRepository = scope.ServiceProvider.GetRequiredService<ISessionRepository>();
-        var summarizationService = scope.ServiceProvider.GetRequiredService<IContextSummarizationService>();
+        var summarizationService = scope.ServiceProvider.GetRequiredService<ITechnicalSummarizationService>();
 
         // Get all active sessions (simplified - in reality we'd have a more efficient way)
         var sessions = await sessionRepository.GetAllAsync(0, 100, stoppingToken);
@@ -60,7 +61,7 @@ public class BackgroundSummarizationService : BackgroundService
     private async Task CheckAndSummarizeSessionAsync(
         Guid sessionId,
         ISessionRepository sessionRepository,
-        IContextSummarizationService summarizationService,
+        ITechnicalSummarizationService summarizationService,
         CancellationToken cancellationToken)
     {
         try
@@ -82,7 +83,14 @@ public class BackgroundSummarizationService : BackgroundService
                     sessionId, usageRatio);
 
                 // Trigger summarization - condense the oldest 50% of messages
-                await summarizationService.SummarizeConversationAsync(sessionId, cancellationToken);
+                var messageSummaries = session.Messages.Select(m => new MessageSummary
+                {
+                    Role = m.Role.ToString(),
+                    Content = m.Content,
+                    Timestamp = m.CreatedAt
+                }).ToList();
+
+                await summarizationService.SummarizeConversationAsync(messageSummaries, new SummarizationOptions(), cancellationToken);
             }
         }
         catch (Exception ex)

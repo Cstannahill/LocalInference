@@ -101,4 +101,20 @@ public class SessionRepository : ISessionRepository
             .Where(m => m.SessionId == sessionId)
             .SumAsync(m => m.TokenCount, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<ContextMessage>> GetMessagesAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        return await _context.ContextMessages
+            .Where(m => m.SessionId == sessionId)
+            .OrderBy(m => m.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<ContextCheckpoint?> GetLatestCheckpointAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        return await _context.ContextCheckpoints
+            .Where(c => c.SessionId == sessionId && c.IsActive)
+            .OrderByDescending(c => c.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

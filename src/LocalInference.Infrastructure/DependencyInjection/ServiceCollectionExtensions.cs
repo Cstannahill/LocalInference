@@ -71,7 +71,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddScoped<IInferenceService, InferenceService>();
+        services.AddScoped<LocalInference.Application.Abstractions.Inference.IInferenceService, LocalInference.Application.Services.InferenceService>();
         services.AddScoped<ISessionManagementService, SessionManagementService>();
         services.AddScoped<IContextManager, ContextManager>();
 

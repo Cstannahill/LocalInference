@@ -18,6 +18,11 @@ public interface ITechnicalRetrievalService
     Task IndexDocumentAsync(Guid documentId, CancellationToken cancellationToken = default);
     Task RemoveDocumentAsync(Guid documentId, CancellationToken cancellationToken = default);
     Task ReindexAllAsync(CancellationToken cancellationToken = default);
+
+    Task<string> RetrieveRelevantReferenceDataAsync(
+        Guid sessionId,
+        string query,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record RetrievalOptions

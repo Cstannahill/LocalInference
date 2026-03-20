@@ -283,4 +283,23 @@ public class TechnicalRetrievalService : ITechnicalRetrievalService
     }
 
     private record TextChunk(string Content, int StartPosition, int EndPosition);
+
+    public async Task<string> RetrieveRelevantReferenceDataAsync(
+    Guid sessionId,
+    string query,
+    CancellationToken cancellationToken = default)
+    {
+        // For now, we'll retrieve reference data and format it as a string
+        // In a more advanced implementation, we could filter by session-linked reference data
+        var options = new RetrievalOptions { MaxResults = 10 };
+        var results = await RetrieveFromReferenceDataAsync(
+            await _embeddingProvider.GenerateEmbeddingAsync(query, cancellationToken),
+            options,
+            cancellationToken);
+
+        if (!results.Any())
+            return string.Empty;
+
+        return string.Join("\n\n", results.Select(r => $"[{r.Source}]: {r.Content}"));
+    }
 }

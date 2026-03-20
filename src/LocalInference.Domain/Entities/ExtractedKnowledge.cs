@@ -1,4 +1,5 @@
 using LocalInference.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LocalInference.Domain.Entities;
 

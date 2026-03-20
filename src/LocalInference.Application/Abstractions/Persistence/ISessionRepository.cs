@@ -12,4 +12,6 @@ public interface ISessionRepository
     Task UpdateAsync(Session session, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<int> GetTotalTokenCountAsync(Guid sessionId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ContextMessage>> GetMessagesAsync(Guid sessionId, CancellationToken cancellationToken = default);
+    Task<ContextCheckpoint?> GetLatestCheckpointAsync(Guid sessionId, CancellationToken cancellationToken = default);
 }

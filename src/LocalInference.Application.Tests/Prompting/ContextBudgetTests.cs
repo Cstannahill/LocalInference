@@ -1,4 +1,5 @@
 using LocalInference.Application.Prompting;
+using Xunit;
 
 namespace LocalInference.Application.Tests.Prompting;
 

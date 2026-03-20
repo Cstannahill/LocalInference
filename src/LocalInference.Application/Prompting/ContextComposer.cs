@@ -16,7 +16,7 @@ public class ContextComposer
     private readonly ISessionRepository _sessionRepository;
     private readonly IReferenceDataRepository _referenceDataRepository;
     private readonly IExtractedKnowledgeRepository _extractedKnowledgeRepository;
-    private readonly IContextSummarizationService _summarizationService;
+    private readonly ITechnicalSummarizationService _summarizationService;
     private readonly IInferenceService _inferenceService;
     private readonly ITechnicalRetrievalService _retrievalService;
 
@@ -24,7 +24,7 @@ public class ContextComposer
         ISessionRepository sessionRepository,
         IReferenceDataRepository referenceDataRepository,
         IExtractedKnowledgeRepository extractedKnowledgeRepository,
-        IContextSummarizationService summarizationService,
+        ITechnicalSummarizationService summarizationService,
         IInferenceService inferenceService,
         ITechnicalRetrievalService retrievalService)
     {

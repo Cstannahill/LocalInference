@@ -55,6 +55,8 @@ public sealed record SessionDto
     public DateTime? LastActivityAt { get; init; }
     public int MessageCount { get; init; }
     public int TotalTokenCount { get; init; }
+    public Guid? SystemProfileId { get; init; }
+    public string? SystemProfileName { get; init; }
 }
 
 public sealed record SessionSummaryDto
@@ -113,6 +115,7 @@ public class SessionManagementService : ISessionManagementService
         var session = Session.Create(
             request.Name,
             config,
+            null,
             request.ContextWindowTokens ?? 8192,
             request.MaxOutputTokens ?? 2048
         );
@@ -209,7 +212,8 @@ public class SessionManagementService : ISessionManagementService
     private SessionDto MapToDto(Session session, InferenceConfig? config = null)
     {
         var configName = config?.Name ?? session.InferenceConfig?.Name ?? "Unknown";
-        
+        var systemProfileName = session.SystemProfile?.Name;
+
         return new SessionDto
         {
             Id = session.Id,
@@ -224,7 +228,9 @@ public class SessionManagementService : ISessionManagementService
             UpdatedAt = session.UpdatedAt,
             LastActivityAt = session.LastActivityAt,
             MessageCount = session.Messages.Count,
-            TotalTokenCount = session.GetTotalTokenCount()
+            TotalTokenCount = session.GetTotalTokenCount(),
+            SystemProfileId = session.SystemProfileId,
+            SystemProfileName = systemProfileName
         };
     }
 
