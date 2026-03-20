@@ -10,6 +10,8 @@ namespace LocalInference.Infrastructure.Retrieval;
 public class TechnicalRetrievalService : ITechnicalRetrievalService
 {
     private readonly ITechnicalDocumentRepository _documentRepository;
+    private readonly IReferenceDataRepository _referenceDataRepository;
+    private readonly IExtractedKnowledgeRepository _extractedKnowledgeRepository;
     private readonly IEmbeddingProvider _embeddingProvider;
     private readonly ILogger<TechnicalRetrievalService> _logger;
 
@@ -18,10 +20,14 @@ public class TechnicalRetrievalService : ITechnicalRetrievalService
 
     public TechnicalRetrievalService(
         ITechnicalDocumentRepository documentRepository,
+        IReferenceDataRepository referenceDataRepository,
+        IExtractedKnowledgeRepository extractedKnowledgeRepository,
         IEmbeddingProvider embeddingProvider,
         ILogger<TechnicalRetrievalService> logger)
     {
         _documentRepository = documentRepository;
+        _referenceDataRepository = referenceDataRepository;
+        _extractedKnowledgeRepository = extractedKnowledgeRepository;
         _embeddingProvider = embeddingProvider;
         _logger = logger;
     }
@@ -32,8 +38,48 @@ public class TechnicalRetrievalService : ITechnicalRetrievalService
         CancellationToken cancellationToken = default)
     {
         var queryEmbedding = await _embeddingProvider.GenerateEmbeddingAsync(query, cancellationToken);
-        var documents = await _documentRepository.GetAllAsync(cancellationToken);
 
+        // Retrieve from technical documents
+        var documentResults = await RetrieveFromDocumentsAsync(queryEmbedding, options, cancellationToken);
+
+        // Retrieve from reference data
+        var referenceDataResults = await RetrieveFromReferenceDataAsync(queryEmbedding, options, cancellationToken);
+
+        // Retrieve from extracted knowledge
+        var knowledgeResults = await RetrieveFromExtractedKnowledgeAsync(queryEmbedding, options, cancellationToken);
+
+        // Combine and deduplicate results
+        var allResults = new List<RetrievalResult>();
+        allResults.AddRange(documentResults);
+        allResults.AddRange(referenceDataResults);
+        allResults.AddRange(knowledgeResults);
+
+        var filteredResults = allResults
+            .OrderByDescending(r => r.Score)
+            .Take(options.MaxResults * 2)
+            .ToList();
+
+        var finalResults = new List<RetrievalResult>();
+        var totalTokens = 0;
+
+        foreach (var result in filteredResults)
+        {
+            if (totalTokens + result.TokenCount <= options.MaxTokens)
+            {
+                finalResults.Add(result);
+                totalTokens += result.TokenCount;
+            }
+        }
+
+        return finalResults;
+    }
+
+    private async Task<IReadOnlyList<RetrievalResult>> RetrieveFromDocumentsAsync(
+        float[] queryEmbedding,
+        RetrievalOptions options,
+        CancellationToken cancellationToken)
+    {
+        var documents = await _documentRepository.GetAllAsync(cancellationToken);
         var results = new List<RetrievalResult>();
 
         foreach (var document in documents.Where(d => d.IsIndexed))
@@ -72,24 +118,68 @@ public class TechnicalRetrievalService : ITechnicalRetrievalService
             }
         }
 
-        var filteredResults = results
-            .OrderByDescending(r => r.Score)
-            .Take(options.MaxResults * 2)
-            .ToList();
+        return results;
+    }
 
-        var finalResults = new List<RetrievalResult>();
-        var totalTokens = 0;
+    private async Task<IReadOnlyList<RetrievalResult>> RetrieveFromReferenceDataAsync(
+        float[] queryEmbedding,
+        RetrievalOptions options,
+        CancellationToken cancellationToken)
+    {
+        var referenceData = await _referenceDataRepository.GetAllAsync(cancellationToken);
+        var results = new List<RetrievalResult>();
 
-        foreach (var result in filteredResults)
+        foreach (var data in referenceData)
         {
-            if (totalTokens + result.TokenCount <= options.MaxTokens)
+            foreach (var item in data.Items)
             {
-                finalResults.Add(result);
-                totalTokens += result.TokenCount;
+                if (item.Embedding == null) continue;
+
+                var similarity = CalculateCosineSimilarity(queryEmbedding, item.EmbeddingVector);
+                if (similarity >= options.MinScore)
+                {
+                    results.Add(RetrievalResult.Create(
+                        item.Content,
+                        data.Name,
+                        similarity,
+                        item.Content.Length / 4, // Rough token estimate
+                        "ReferenceData",
+                        null,
+                        0)); // No chunk index for reference data
+                }
             }
         }
 
-        return finalResults;
+        return results;
+    }
+
+    private async Task<IReadOnlyList<RetrievalResult>> RetrieveFromExtractedKnowledgeAsync(
+        float[] queryEmbedding,
+        RetrievalOptions options,
+        CancellationToken cancellationToken)
+    {
+        var knowledge = await _extractedKnowledgeRepository.GetAllAsync(cancellationToken);
+        var results = new List<RetrievalResult>();
+
+        foreach (var item in knowledge)
+        {
+            if (item.Embedding == null) continue;
+
+            var similarity = CalculateCosineSimilarity(queryEmbedding, item.EmbeddingVector);
+            if (similarity >= options.MinScore)
+            {
+                results.Add(RetrievalResult.Create(
+                    item.Content,
+                    $"Session {item.SessionId}",
+                    similarity,
+                    item.Content.Length / 4, // Rough token estimate
+                    "ExtractedKnowledge",
+                    null,
+                    0)); // No chunk index for extracted knowledge
+            }
+        }
+
+        return results;
     }
 
     public async Task<IReadOnlyList<RetrievalResult>> RetrieveForSessionAsync(
@@ -98,6 +188,8 @@ public class TechnicalRetrievalService : ITechnicalRetrievalService
         RetrievalOptions options,
         CancellationToken cancellationToken = default)
     {
+        // For now, we'll retrieve all relevant data
+        // In a more advanced implementation, we could filter by session-linked reference data
         return await RetrieveAsync(query, options, cancellationToken);
     }
 
