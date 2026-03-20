@@ -112,3 +112,6 @@ docker-compose.local.yml
 # Generated files
 coverage.xml
 .editorconfig.user
+
+# Git worktrees
+.worktrees/
