@@ -24,7 +24,7 @@ A high-performance, modular General Inference API compatible with OpenAI's API s
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/Cstannahill/LocalInference
 cd LocalInference
 
 # Restore dependencies
